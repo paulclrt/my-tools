@@ -1,0 +1,88 @@
+#!/bin/bash
+
+
+#
+# Paul CLaret 23/02/25
+# Simple bash script to generate backup of entire system by default
+# COuld be improved by adding custom code to track changed file since last backup instead of redoing the entire thing
+# In the mean time: does its job ok. run the program, get the output on a backup drive for storage
+# when needed, remount the image over your system
+#
+
+default_exclude="media dev run mnt proc sys tmp cdrom lost+found snap lib.user-is-merged bin.usr-is-marged swap.img"
+
+
+echo "Paul Claret - Backup bash script"
+echo "using squashFS to backup entire drive (be careful, it could be heavy)"
+echo "excluded files and folder from root: $default_exclude"
+echo "backing up everything else"
+echo "max fs size is 2TiB and no ACL support"
+echo ""
+
+
+usage() {
+    echo ""
+    echo "Error while running script"
+
+    echo "Usage: "
+    echo "    backrup.sh --output /path/to/hdd/backup/root.backup.sqfs"
+
+    echo ""
+    echo "Additional parameters: "
+    echo "    --exclude \"/folder1 /folder2 /file3\"       (Add these files to the excluded one above | WARNING: USE QUOTES)"
+
+    exit
+}
+
+
+if [[ $EUID -ne 0 ]];then
+    echo "this script must be run as sudo"
+    echo "sudo $0 $*"
+    exit
+fi
+
+
+
+
+
+
+#reading the arugments and putting them in variables of same name
+while [ $# -gt 0 ]; do
+    if [[ $1 == "--"* ]]; then
+        if [[ $1 != "--output"  && $1 != "--exclude" ]]; then
+            echo $([[ $1 != "--output" ]])
+            echo "invalid option:"
+            echo "$1"
+            usage
+        fi
+        v="${1/--/}"
+        declare "$v"="$2"
+        shift
+    fi
+    shift
+done
+
+
+if [[ -z $output ]]; then
+    echo "missing mandatory parameter: --output"
+    usage
+fi
+if [[ -z $exclude ]]; then
+    echo "Warning: you did not exclude any other file... Be sure to continue with basic config"
+else
+    echo "Excluding the other following files/folders: $exclude"
+fi
+
+
+echo "Running cmd:"
+echo "mksquashfs / $output -e $default_exclude $exclude"
+
+echo "Starting"
+
+mksquashfs / $output -e $default_exclude $exclude
+echo "Done"
+
+#todo
+## REmouting fs cmds
+# sudo mkdir /mnt/root_backup
+# sudo mount /path/to/backup/hdd/root-backup.sqsh /mnt/root_backup -t squashfs -o loop
